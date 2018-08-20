@@ -85,39 +85,84 @@ class DNS1D {
      * @return string SVG code.
      * @protected
      */
-    protected function getBarcodeSVG($code, $type, $w = 2, $h = 30, $color = 'black', $showCode = true, $inline = false) {
+    protected function getBarcodeSVG($code, $type, $w = 2, $h = 30, $color = 'black',$showtext=false) {
+//        if(! $showtext){
+//            $h=$h+10;
+//        }
         if (!$this->store_path) {
             $this->setStorPath(app('config')->get("barcode.store_path"));
         }
         $this->setBarcode($code, $type);
+
+//        print_r($this->barcode_array);die();
         // replace table for special characters
         $repstr = array("\0" => '', '&' => '&amp;', '<' => '&lt;', '>' => '&gt;');
-		if (!$inline)
-		{
-			$svg = '<' . '?' . 'xml version="1.0" standalone="no"' . '?' . '>' . "\n";
-			$svg .= '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' . "\n";
-		}
-        $svg .= '<svg width="' . round(($this->barcode_array['maxw'] * $w), 3) . '" height="' . $h . '" version="1.1" xmlns="http://www.w3.org/2000/svg">' . "\n";
-        $svg .= "\t" . '<desc>' . strtr($this->barcode_array['code'], $repstr) . '</desc>' . "\n";
-        $svg .= "\t" . '<g id="bars" fill="' . $color . '" stroke="none">' . "\n";
+        $svg = '<'.'?'.'xml version="1.0" standalone="no"'.'?'.'>'."\n";
+        $svg .= '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">'."\n";
+        if($type=="EAN13" && $showtext){
+            $svg .= '<svg width="'.(round(($this->barcode_array['maxw'] * $w)+20, 3)).'" height="'.($h).'" version="1.1" xmlns="http://www.w3.org/2000/svg">'."\n";
+        }else{
+            $svg .= '<svg width="'.(round(($this->barcode_array['maxw'] * $w), 3)).'" height="'.($h).'" version="1.1" xmlns="http://www.w3.org/2000/svg">'."\n";
+        }
+
+        $svg .= "\t".'<desc>'.strtr($this->barcode_array['code'], $repstr).'</desc>'."\n";
+        $svg .= "\t".'<g id="bars" fill="'.$color.'" stroke="none">'."\n";
         // print bars
-        $x = 0;
+        if($type=="EAN13" && $showtext){
+            $x=20;
+        }else{
+            $x=0;
+        }
+
         foreach ($this->barcode_array['bcode'] as $k => $v) {
-            $bw = round(($v['w'] * $w), 3);
+            $bw = round(($v['w'] * $w),3);
+
             $bh = round(($v['h'] * $h / $this->barcode_array['maxh']), 3);
-	    if($showCode)      
-                $bh -= 12;
             if ($v['t']) {
                 $y = round(($v['p'] * $h / $this->barcode_array['maxh']), 3);
                 // draw a vertical bar
-                $svg .= "\t\t" . '<rect x="' . $x . '" y="' . $y . '" width="' . $bw . '" height="' . $bh . '" />' . "\n";
+                if($showtext){
+                    if($type=="EAN13" && ($k ==0 || $k==1 || $k==2 || $k==28 || $k==29 ||   $k==30 ||  $k==56 || $k==57 || $k==58)){
+                        $bh=$bh-5;
+                    }else{
+                        $bh=$bh-10;
+                    }
+                }
+                $svg .= "\t\t" . '<rect x="' . $x . '" y="' . ($y) . '" width="' . $bw . '" height="' . ($bh) . '" />' . "\n";
             }
+
             $x += $bw;
         }
-	if($showCode) 
-            $svg .= "\t" .'<text x="'. (round(($this->barcode_array['maxw'] * $w), 3)/2)  .'" text-anchor="middle"  y="'.  ($bh + 12) .'" id="code" fill="' . $color . '" font-size ="12px" >'. $code .'</text>'. "\n";
-
         $svg .= "\t" . '</g>' . "\n";
+        if($showtext){
+            if($w==1){
+                $x=12;
+            }elseif($w==2){
+                $x=5;
+            }else{
+                $x=0;
+            }
+            $tmparr=str_split(strtr($this->barcode_array['code'], $repstr));
+            foreach ($tmparr as $i=>$tmp){
+                $svg .= '<g><text x="'.$x.'px" y="'.($h).'px" style="font-size: 10px; ">'.$tmp.'</text></g>';
+                if($i==0 || $i==6) {
+                    $x += 5*$w;
+                }
+                $x += 7*$w;
+            }
+
+//            $tmparr=str_split(strtr($this->barcode_array['code'], $repstr));
+//            $newcode=[];
+//            foreach ($tmparr as $i=>$tmp){
+//                if($i==1 || $i==7) {
+//                    $newcode[]=" ";
+//                }
+//                $newcode[]=$tmp;
+//            }
+//            $svg .= '<g><text x="0%" y="100%" textLength="'.($w*100-($w*100/15)).'" style="font-size: 10px; ">'.join("",$newcode).'</text></g>';
+
+        }
+
         $svg .= '</svg>' . "\n";
         return $svg;
     }
@@ -132,30 +177,72 @@ class DNS1D {
      * @return string HTML code.
      * @protected
      */
-    protected function getBarcodeHTML($code, $type, $w = 2, $h = 30, $color = 'black', $showCode =false) {
+    protected function getBarcodeHTML($code, $type, $w = 2, $h = 30, $color = 'black',$showtext=false) {
+        if($showtext){
+            $h=$h-10;
+        }
         if (!$this->store_path) {
             $this->setStorPath(app('config')->get("barcode.store_path"));
         }
         $this->setBarcode($code, $type);
-        $html = '<div style="font-size:0;position:relative;">' . "\n";
-        $html = '<div style="font-size:0;position:relative;width:' . ($this->barcode_array['maxw'] * $w) . 'px;height:' . ($h) . 'px;">' . "\n";
+        $repstr = array("\0" => '', '&' => '&amp;', '<' => '&lt;', '>' => '&gt;');
+        if($type=="EAN13" && $showtext){
+            $html = '<div style="font-size:0;position:relative;width:' . ($this->barcode_array['maxw'] * $w +20) . 'px;height:' . ($h) . 'px;">' . "\n";
+        }else{
+            $html = '<div style="font-size:0;position:relative;width:' . ($this->barcode_array['maxw'] * $w) . 'px;height:' . ($h) . 'px;">' . "\n";
+        }
+
         // print bars
-        $x = 0;
+        if($type=="EAN13"  && $showtext ){
+            $x=20;
+        }else{
+            $x=0;
+        }
         foreach ($this->barcode_array['bcode'] as $k => $v) {
             $bw = round(($v['w'] * $w), 3);
             $bh = round(($v['h'] * $h / $this->barcode_array['maxh']), 3);
-	    if($showCode)      
-                $bh -= 12 ;
             if ($v['t']) {
                 $y = round(($v['p'] * $h / $this->barcode_array['maxh']), 3);
                 // draw a vertical bar
+                if($showtext){
+                    if($type=="EAN13" && ($k ==0 || $k==1 || $k==2 || $k==28 || $k==29 ||   $k==30 ||  $k==56 || $k==57 || $k==58)){
+                        $bh=$bh+5;
+                    }else{
+                        $bh=$bh;
+                    }
+                }
                 $html .= '<div style="background-color:' . $color . ';width:' . $bw . 'px;height:' . $bh . 'px;position:absolute;left:' . $x . 'px;top:' . $y . 'px;">&nbsp;</div>' . "\n";
             }
             $x += $bw;
         }
-	if($showCode) 
-            $html .= '<div style="position:absolute;bottom:0; text-align:center; width:' . ($this->barcode_array['maxw'] * $w) . 'px;  font-size: 0.6vw;">'. $code .'</div>';
-
+        if($showtext){
+            if($w==1){
+                $x=12;
+            }elseif($w==2){
+                $x=5;
+            }else{
+                $x=0;
+            }
+            $tmparr=str_split(strtr($this->barcode_array['code'], $repstr));
+            foreach ($tmparr as $i=>$tmp){
+//                $svg .= '<g><text x="'.$x.'px" y="100%" style="font-size: 10px; ">'.$tmp.'</text></g>';
+                $html .= '<div style="font-size: 10px;position:absolute;height: 10px ;left:'.$x.'px;top:' . $h . 'px;">'.$tmp.'</div>';
+                if($i==0 || $i==6) {
+                    $x += 5*$w;
+                }
+                $x += 7*$w;
+            }
+//
+//            $tmparr=str_split(strtr($this->barcode_array['code'], $repstr));
+//            $newcode=[];
+//            foreach ($tmparr as $i=>$tmp){
+//                if($i==1 || $i==7) {
+//                    $newcode[]=" ";
+//                }
+//                $newcode[]=$tmp;
+//            }
+//            $html .= '<div style="font-size: 10px;position:absolute;height: 10px ;left:0px;top:' . $h . 'px;letter-spacing:'.(($w*100-12*7)/15).'px">'.join('',$newcode).'</div>';
+        }
         $html .= '</div>' . "\n";
         return $html;
     }
@@ -170,14 +257,20 @@ class DNS1D {
      * @return image or false in case of error.
      * @protected
      */
-    protected function getBarcodePNG($code, $type, $w = 2, $h = 30, $color = array(0, 0, 0), $showCode = false) {
+    protected function getBarcodePNG($code, $type, $w = 2, $h = 30, $color = array(0, 0, 0),$showtext=false) {
         if (!$this->store_path) {
             $this->setStorPath(app('config')->get("barcode.store_path"));
         }
         $this->setBarcode($code, $type);
         // calculate image size
-        $width = ($this->barcode_array['maxw'] * $w);
+
+        if($type=="EAN13" && $showtext){
+            $width = ($this->barcode_array['maxw'] * $w) +20;
+        }else{
+            $width = ($this->barcode_array['maxw'] * $w);
+        }
         $height = $h;
+        $repstr = array("\0" => '', '&' => '&amp;', '<' => '&lt;', '>' => '&gt;');
         if (function_exists('imagecreate')) {
             // GD library
             $imagick = false;
@@ -197,15 +290,27 @@ class DNS1D {
             return false;
         }
         // print bars
-        $x = 0;
+        if($type=="EAN13"  && $showtext ){
+            $x=20;
+        }else{
+            $x=0;
+        }
         foreach ($this->barcode_array['bcode'] as $k => $v) {
             $bw = round(($v['w'] * $w), 3);
             $bh = round(($v['h'] * $h / $this->barcode_array['maxh']), 3);
-	    if($showCode)
-            	$bh -= imagefontheight(3) ;
+            if($showtext){
+                $bh=$bh-12;
+            }
             if ($v['t']) {
                 $y = round(($v['p'] * $h / $this->barcode_array['maxh']), 3);
                 // draw a vertical bar
+                if($showtext){
+                    if($type=="EAN13" && ($k ==0 || $k==1 || $k==2 || $k==28 || $k==29 ||   $k==30 ||  $k==56 || $k==57 || $k==58)){
+                        $bh=$bh+5;
+                    }else{
+                        $bh=$bh;
+                    }
+                }
                 if ($imagick) {
                     $bar->rectangle($x, $y, ($x + $bw), ($y + $bh));
                 } else {
@@ -214,19 +319,29 @@ class DNS1D {
             }
             $x += $bw;
         }
-        ob_start();
-	    
-	// Add Code String in bottom
-        if($showCode)
-        	if ($imagick) {
-		    $bar->setTextAlignment(\Imagick::ALIGN_CENTER);
-		    $bar->annotation( 10 , $h - $bh +10 , $code );
-		} else {
-		    $width_text = imagefontwidth(3) * strlen($code);
-		    $height_text = imagefontheight(3);
-		    imagestring($png, 3, ($width/2) - ($width_text/2) , ($height - $height_text) , $code, $fgcol);
+        if($showtext){
+            $text_color = imagecolorallocate($png, 1, 1, 1);
 
-		}    
+            if($w==1){
+                $x=12;
+            }elseif($w==2){
+                $x=8;
+            }else{
+                $x=0;
+            }
+            $tmparr=str_split(strtr($this->barcode_array['code'], $repstr));
+            foreach ($tmparr as $i=>$tmp){
+                imagestring($png, 2, $x, ($h-12), $tmp,$text_color);
+                if($i==0 || $i==6) {
+                    $x += 5*$w;
+                }
+                $x += 7*$w;
+            }
+
+            $font = 'arial.ttf';
+//            imagettftext($png, 10, 0, 0, $h-10, $text_color, $font, $code); //otherwise just do normally
+        }
+        ob_start();
         // get image out put
         if ($imagick) {
             $png->drawimage($bar);
@@ -261,7 +376,7 @@ class DNS1D {
      * @return path or false in case of error.
      * @protected
      */
-    protected function getBarcodePNGPath($code, $type, $w = 2, $h = 30, $color = array(0, 0, 0), $showCode = false) {
+    protected function getBarcodePNGPath($code, $type, $w = 2, $h = 30, $color = array(0, 0, 0)) {
         if (!$this->store_path) {
             $this->setStorPath(app('config')->get("barcode.store_path"));
         }
@@ -292,9 +407,6 @@ class DNS1D {
         foreach ($this->barcode_array['bcode'] as $k => $v) {
             $bw = round(($v['w'] * $w), 3);
             $bh = round(($v['h'] * $h / $this->barcode_array['maxh']), 3);
-	    
-	    if($showCode)
-                 $bh -= imagefontheight(3) ;
             if ($v['t']) {
                 $y = round(($v['p'] * $h / $this->barcode_array['maxh']), 3);
                 // draw a vertical bar
@@ -306,16 +418,6 @@ class DNS1D {
             }
             $x += $bw;
         }
-	if($showCode)
-            if ($imagick) {
-                $bar->setTextAlignment(\Imagick::ALIGN_CENTER);
-                $bar->annotation( 10 , $h - $bh +10 , $code );
-            } else {
-                $width_text = imagefontwidth(3) * strlen($code);
-                $height_text = imagefontheight(3);
-                imagestring($png, 3, ($width/2) - ($width_text/2) , ($height - $height_text) , $code, $fgcol);
-            }
-            
         $file_name= Str::slug($code);
         $save_file = $this->checkfile($this->store_path . $file_name . ".png");
 
