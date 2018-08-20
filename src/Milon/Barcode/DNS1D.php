@@ -291,7 +291,14 @@ class DNS1D {
         }
         // print bars
         if($type=="EAN13"  && $showtext ){
-            $x=20;
+
+            if($w==1){
+                $x=10;
+            }elseif($w==2){
+                $x=16;
+            }else{
+                $x=20;
+            }
         }else{
             $x=0;
         }
@@ -299,7 +306,15 @@ class DNS1D {
             $bw = round(($v['w'] * $w), 3);
             $bh = round(($v['h'] * $h / $this->barcode_array['maxh']), 3);
             if($showtext){
-                $bh=$bh-12;
+                if($w==1){
+                    $lineHeight=12;
+                }elseif($w==2){
+                    $lineHeight=20;
+                }else{
+                    $lineHeight=22;
+                }
+                $bh=$bh-$lineHeight;
+
             }
             if ($v['t']) {
                 $y = round(($v['p'] * $h / $this->barcode_array['maxh']), 3);
@@ -323,15 +338,18 @@ class DNS1D {
             $text_color = imagecolorallocate($png, 1, 1, 1);
 
             if($w==1){
-                $x=12;
+                $x=2;
+                $font=1;
             }elseif($w==2){
-                $x=8;
+                $x=3;
+                $font=7;
             }else{
                 $x=0;
+                $font=7;
             }
             $tmparr=str_split(strtr($this->barcode_array['code'], $repstr));
             foreach ($tmparr as $i=>$tmp){
-                imagestring($png, 2, $x, ($h-12), $tmp,$text_color);
+                imagestring($png, $font, $x, ($h-$lineHeight+2), $tmp,$text_color);
                 if($i==0 || $i==6) {
                     $x += 5*$w;
                 }
@@ -1566,7 +1584,7 @@ class DNS1D {
             // add check digit
             $code .= $r;
         } elseif ($r !== intval($code{$data_len})) {
-			throw new \Milon\Barcode\WrongCheckDigitException($r, intval($code{$data_len}));
+            throw new \Milon\Barcode\WrongCheckDigitException($r, intval($code{$data_len}));
         }
         if ($len == 12) {
             // UPC-A
@@ -2574,27 +2592,27 @@ class DNS1D {
         return '0' . $manufacturer . $itemNumber;
     }
 
-	/**
-	 * Handle dynamic method calls.
-	 *
-	 * @param  string  $method
-	 * @param  array  $parameters
-	 * @return mixed
-	 */
-	public function __call($method, $parameters)
-	{
-		return $this->$method(...$parameters);
-	}
+    /**
+     * Handle dynamic method calls.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    public function __call($method, $parameters)
+    {
+        return $this->$method(...$parameters);
+    }
 
-	/**
-	 * Handle dynamic static method calls.
-	 *
-	 * @param  string  $method
-	 * @param  array  $parameters
-	 * @return mixed
-	 */
-	public static function __callStatic($method, $parameters)
-	{
-		return (new static)->$method(...$parameters);
-	}
+    /**
+     * Handle dynamic static method calls.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    public static function __callStatic($method, $parameters)
+    {
+        return (new static)->$method(...$parameters);
+    }
 }
